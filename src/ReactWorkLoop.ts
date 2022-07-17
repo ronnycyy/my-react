@@ -99,6 +99,20 @@ function completeUnitOfWork(unitOfWork: IFiber) {
     completeWork(current, completedWork);
     // 收集当前fiber的副作用，交给父fiber。 (生成圣诞树上的彩灯💡)
     collectEffectList(returnFiber, completedWork);
+    // 自己已经完成✅，如果有弟弟，下一个工作的就是弟弟，如果没有，就回到父级。
+    const siblingFiber = completedWork.sibling;
+    if (siblingFiber) {
+      workInProgress = siblingFiber;
+      // 自己结束，让弟弟开始工作 (beginWork)
+      return;
+    } else {
+      // 没有弟弟，说明自己是最小的儿子，让父级进入循环，也完成工作。(最小的儿子完成工作了，父亲也就完成工作了)
+      completedWork = returnFiber;
+      // 往上窜的过程，随时准备结束整个协调流程。怎么讲？:
+      // 如果到达了 rootFiber，rootFiber.return === null, 这时候不会进 completedWork 的循环，而是跳出，回到 workLoopSync 的循环，
+      // 然后 workInProgress === null, 结束循环，也就结束了整个协调流程。
+      workInProgress = completedWork;
+    }
   } while (completedWork);
 }
 
@@ -163,7 +177,20 @@ function test() {
     nextEffect = nextEffect.nextEffect;
   }
   effectList += `null`;
-  // rootFiber ->  D ->  B  ->  C  ->  A ->  null
-  //            三层(D)  二层(B,C)    一层(A)   (effectList，rootFiber 直接连到最低，然后从低往顶连)
+
+  /**
+   * Fiber 树:
+   * 
+   *     rootFiber
+   *        A
+   *    B       C
+   * D
+   * 
+   * 
+   * EffectList:
+   * rootFiber ->  D ->  B  ->  C  ->  A ->  null
+   *             三层(D)  二层(B,C)    一层(A)   (effectList，rootFiber 直接连到最低，然后从低往顶连)
+   */
+
   return effectList;
 }
