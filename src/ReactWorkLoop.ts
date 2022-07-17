@@ -1,3 +1,4 @@
+import { NoFlags } from './../../__my-react/src/ReactFiberFlags';
 import { IFiber, IFiberRootNode } from "./models";
 import { createWorkInProgress } from "./ReactFiber";
 import { beginWork } from './ReactFiberBeginWork';
@@ -83,7 +84,6 @@ function performUnitOfWork(unitOfWork: IFiber) {
   }
 }
 
-
 /**
  * 当前 fiber 没有子fiber结点了，完成工作✅
  * @param unitOfWork 当前 fiber 结点
@@ -95,6 +95,75 @@ function completeUnitOfWork(unitOfWork: IFiber) {
     // 当前完成，有兄弟到兄弟，没兄弟到父级，回到根时结束。
     const current = completedWork.alternate;
     const returnFiber = current.return;
+    // 创建真实 DOM 结点, 根据 workInProgress.pendingProps 赋予属性。
     completeWork(current, completedWork);
+    // 收集当前fiber的副作用，交给父fiber。 (生成圣诞树上的彩灯💡)
+    collectEffectList(returnFiber, completedWork);
   } while (completedWork);
+}
+
+/**
+ * 收集当前fiber的副作用，交给父fiber。 (生成圣诞树上的彩灯💡)
+ * 
+ * @param returnFiber 父fiber
+ * @param completedWork 当前完成工作的fiber✅
+ */
+function collectEffectList(returnFiber: IFiber, completedWork: IFiber) {
+  const flags = completedWork.flags;
+
+  // 1. 把自己的链 接上父结点 effectList 的尾巴。
+  // Fiber 这棵圣诞树🌲，现在要连一条彩灯出来了💡!
+  if (!returnFiber.firstEffect) {
+    // 如果父级没有 effectList, 把 fiber 的 effectList 给它。
+    returnFiber.firstEffect = completedWork.firstEffect;
+  }
+  if (completedWork.lastEffect) {
+    if (returnFiber.lastEffect) {
+      // 如果父子都有 effectList，把 子的 effectList 连上 父的尾巴。
+      returnFiber.lastEffect.nextEffect = completedWork.firstEffect;
+    }
+    // 父级 effectList 已更新，更新尾指针，指向整条链表尾。
+    returnFiber.lastEffect = completedWork.lastEffect;
+  }
+
+  // 2. 把自己连到父结点 effectList 的最后面。
+  // 所以，最后副作用链表是从底结点到顶结点的，它长这样: rootFiber -> grandGrandGrandChild -> grandGrandChild -> grandChild -> child。
+  if (flags !== NoFlags) {
+    // 如果完成工作的结点有副作用，就需要添加到 effectList 里。
+    if (returnFiber.lastEffect) {
+      // 如果父结点已经有 effectList，加到后面
+      returnFiber.lastEffect.nextEffect = completedWork;
+    } else {
+      // 如果没有，新建 effectList  
+      returnFiber.firstEffect = completedWork;
+    }
+    returnFiber.lastEffect = completedWork;
+  }
+}
+
+
+// 测试 effectList 连接效果
+function test() {
+  const rootFiber = { key: 'rootFiber' } as IFiber;
+  const fiberA = { key: "A", flags: 2 } as IFiber;
+  const fiberB = { key: "B", flags: 2 } as IFiber;
+  const fiberC = { key: "C", flags: 2 } as IFiber;
+  const fiberD = { key: "D", flags: 2 } as IFiber;
+  // B 下面一子 D
+  collectEffectList(fiberB, fiberD);
+  // A 下面两子 B C
+  collectEffectList(fiberA, fiberB);
+  collectEffectList(fiberA, fiberC);
+  // rootFiber 下面一子 A
+  collectEffectList(rootFiber, fiberA);
+  let effectList = '';
+  let nextEffect = rootFiber.firstEffect;
+  while (nextEffect) {
+    effectList += `${nextEffect.key}->`;
+    nextEffect = nextEffect.nextEffect;
+  }
+  effectList += `null`;
+  // rootFiber ->  D ->  B  ->  C  ->  A ->  null
+  //            三层(D)  二层(B,C)    一层(A)   (effectList，rootFiber 直接连到最低，然后从低往顶连)
+  return effectList;
 }
