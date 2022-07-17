@@ -11,12 +11,12 @@ export interface IReactElement {
 }
 
 export interface IPayload {
-  element: IReactElement | Array<IReactElement>;  // 准备挂载的虚拟DOM。 rootFiber 的 update 对象具有，如 App 组件的 ReactElement。
-}
+  element?: IReactElement | Array<IReactElement>;  // 准备挂载的虚拟DOM。 rootFiber 的 update 对象具有，如 App 组件的 ReactElement。
+};
 
 // Fiber 上的更新队列的一个小 update 对象
 export interface IUpdate {
-  payload: IPayload;   // 更新的内容
+  payload: IPayload | Object;   // 更新的内容
   next: IUpdate | null;   // 指针，指向下一个 update 对象
 }
 
@@ -57,7 +57,7 @@ export interface IFiber {
   child: IFiber;    // 子结点
   sibling: IFiber;  // 下一个兄弟结点
 
-  stateNode: IFiberRootNode | Element;  // fiber对应的真实DOM 或 整个应用的根结点(rootFiber.stateNode === fiberRootNode)
+  stateNode: IFiberRootNode | HTMLElement;  // fiber对应的真实DOM 或 整个应用的根结点(rootFiber.stateNode === fiberRootNode)
 
   // 双缓冲
   alternate: IFiber;  // 替身。本次的 current.alternate 指向上次的 current 结点，可用作 本次 workInProgress 结点，实现双缓冲。
@@ -65,6 +65,7 @@ export interface IFiber {
 
 // 整个 React 应用的根结点
 export interface IFiberRootNode {
-  containerInfo: Element;   // 挂载 React 应用的真实 DOM 结点
-  current: IFiber;  // 当前 Fiber 树的根结点
+  containerInfo: HTMLElement;   // 挂载 React 应用的真实 DOM 结点
+  current: IFiber;  // 当前视图对应 Fiber 树的根结点
+  finishedWork: IFiber;  // 更新后产生的 workInProgress 树的根结点
 }

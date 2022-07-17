@@ -1,23 +1,15 @@
 {
-  "name": "designer",
+  "name": "my-react",
   "version": "1.0.0",
-  "description": "图形绘制器",
-  "main": "index.js",
+  "description": "手写react源码",
+  "main": "index.tsx",
   "scripts": {
     "start": "scripty",
     "build": "scripty"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/ronnycyy/designer.git"
-  },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/ronnycyy/designer/issues"
-  },
-  "homepage": "https://github.com/ronnycyy/designer#readme",
   "dependencies": {
     "antd": "^4.16.1",
     "autoprefixer": "^9.8.6",

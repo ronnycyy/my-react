@@ -1,4 +1,4 @@
-import { IProps, TFIberType } from './models';
+import { IProps, TFiberType } from './models';
 /**
  * 手写 React
  */
@@ -21,7 +21,7 @@ const RESERVED_PROPS = {
  * @param config 配置对象, 即标签上的属性, 如 { id: string, className: string, readonly: boolean }
  * @param children 第一个子结点，如果有多个子结点，会依次放在后面。如 children1, children2, children3, ...
  */
-function createElement(type: string, config: any, children: IReactElement): IReactElement {
+function createElement(type: TFiberType, config: any, children: IReactElement): IReactElement {
   let propName: string;
 
   // Reserved names are extracted
@@ -83,7 +83,7 @@ function createElement(type: string, config: any, children: IReactElement): IRea
  * @param ref DOM引用
  * @param props 属性，包含普通属性和子结点属性。如 { id: string, className: string, children: Array<ReactElement> }
  */
-function ReactElement(type: TFIberType, key: string, ref, props: IProps) {
+function ReactElement(type: TFiberType, key: string, ref, props: IProps) {
   const element = {
     $$typeof: REACT_ELEMENT_TYPE,
     type,

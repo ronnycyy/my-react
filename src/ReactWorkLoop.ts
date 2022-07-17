@@ -1,13 +1,14 @@
-import { NoFlags } from './../../__my-react/src/ReactFiberFlags';
+import { HostComponent, HostRoot } from './ReactWorkTags';
 import { IFiber, IFiberRootNode } from "./models";
 import { createWorkInProgress } from "./ReactFiber";
 import { beginWork } from './ReactFiberBeginWork';
 import { completeWork } from './ReactFiberCompleteWork';
+import { Deletion, NoFlags, Placement, ReactFlags, Update } from "./ReactFiberFlags";
 
 // 正在更新的 FiberRootNode
-let workInProgressRoot = null;
+let workInProgressRoot: IFiberRootNode = null;
 // 正在更新的 Fiber 结点
-let workInProgress = null;
+let workInProgress: IFiber = null;
 
 /**
  * 从一个 Fiber 出发，调度更新。
@@ -41,7 +42,7 @@ function markUpdateLaneFromFiberToRoot(soureFiber: IFiber) {
 }
 
 /**
- * 根据 老Fiber树 和 新ReactElement (虚拟DOM) 创建 新Fiber树，然后，根据 新Fiber树 更新 真实DOM对象。
+ * 根据 老Fiber树 和 新ReactElement (虚拟DOM) 创建 新Fiber树，然后，根据 新Fiber树 更新 真实DOM树。
  * @param fiberRootNode 整个 React 应用的根结点
  */
 function performSyncWorkOnRoot(fiberRootNode: IFiberRootNode) {
@@ -50,11 +51,75 @@ function performSyncWorkOnRoot(fiberRootNode: IFiberRootNode) {
   // 从 rootFiber 创建 workInProgress
   workInProgress = createWorkInProgress(workInProgressRoot.current);
   // 从 workInProgress 开始自上而下地构建 新的fiber树
+  // 执行工作循环，构建副作用链
   workLoopSync();
+  // 提交，修改DOM
+  commitRoot();
 }
 
+function commitRoot() {
+  // FiberRootNode 的 current树 的 替身，也就是整棵已经完成工作的 workInProgress 树。
+  const finishedWork = workInProgressRoot.current.alternate;
+  workInProgressRoot.finishedWork = finishedWork;
+  commitMutationEffects(workInProgressRoot);
+}
+
+function commitMutationEffects(root: IFiberRootNode) {
+  const finishedWork = root.finishedWork;
+  // 遍历副作用链
+  let nextEffect = finishedWork.firstEffect;
+  let effectList = '';
+  while (nextEffect) {
+    effectList += `${JUST_TEST_GET_FLAG_NAME(nextEffect.flags)}${nextEffect.type}->`;
+    // 执行副作用
+    const flags = nextEffect.flags;
+    if (flags === Placement) {
+      commitPlacement(nextEffect);
+    }
+    nextEffect = nextEffect.nextEffect;
+  }
+  effectList += 'null';
+  /**
+   * const App = (
+      <div id="title" className="title">
+        <h1>Hello World</h1>
+      </div>
+    )
+    rootFiber -> 5_h1 -> 5_div -> null 
+  */
+  console.log(effectList);
+  // 真实DOM树 已根据 finishedWork 完成修改✅， current 指向改为 finishedWork，现在由 finishedWork 代表视图。
+  root.current = finishedWork;
+}
+
+/**
+ * 把 fiber 上的真实 DOM 插入到 视图
+ * @param nextEffect 
+ */
+function commitPlacement(nextEffect: IFiber) {
+  const stateNode = nextEffect.stateNode as HTMLElement;
+  const parentStateNode = getParentStateNode(nextEffect) as HTMLElement;
+  parentStateNode.appendChild(stateNode);
+}
+
+function getParentStateNode(fiber: IFiber) {
+  let parent = fiber.return;
+  do {
+    if (parent.tag === HostComponent) {
+      // 如果是原生，就返回它的真实DOM
+      return parent.stateNode;
+    } else if (parent.tag === HostRoot) {
+      // 必然会来到根
+      return (parent.stateNode as IFiberRootNode).containerInfo;
+    } else {
+      // 函数组件、类组件
+      parent = parent.return;
+    }
+  } while (parent);
+}
+
+
 function workLoopSync() {
-  debugger
   while (workInProgress) {
     // 执行每一个工作单元。所以，每一个 fiber 被视为一个工作单元。
     performUnitOfWork(workInProgress);
@@ -94,7 +159,8 @@ function completeUnitOfWork(unitOfWork: IFiber) {
   do {
     // 当前完成，有兄弟到兄弟，没兄弟到父级，回到根时结束。
     const current = completedWork.alternate;
-    const returnFiber = current.return;
+    // workInProgress 的父结点
+    const returnFiber = completedWork.return;
     // 创建真实 DOM 结点, 根据 workInProgress.pendingProps 赋予属性。
     completeWork(current, completedWork);
     // 收集当前fiber的副作用，交给父fiber。 (生成圣诞树上的彩灯💡)
@@ -123,35 +189,35 @@ function completeUnitOfWork(unitOfWork: IFiber) {
  * @param completedWork 当前完成工作的fiber✅
  */
 function collectEffectList(returnFiber: IFiber, completedWork: IFiber) {
-  const flags = completedWork.flags;
-
-  // 1. 把自己的链 接上父结点 effectList 的尾巴。
-  // Fiber 这棵圣诞树🌲，现在要连一条彩灯出来了💡!
-  if (!returnFiber.firstEffect) {
-    // 如果父级没有 effectList, 把 fiber 的 effectList 给它。
-    returnFiber.firstEffect = completedWork.firstEffect;
-  }
-  if (completedWork.lastEffect) {
-    if (returnFiber.lastEffect) {
-      // 如果父子都有 effectList，把 子的 effectList 连上 父的尾巴。
-      returnFiber.lastEffect.nextEffect = completedWork.firstEffect;
+  if (returnFiber) {
+    // 1. 把自己的链 接上父结点 effectList 的尾巴。
+    // Fiber 这棵圣诞树🌲，现在要连一条彩灯出来了💡!
+    if (!returnFiber.firstEffect) {
+      // 如果父级没有 effectList, 把 fiber 的 effectList 给它。
+      returnFiber.firstEffect = completedWork.firstEffect;
     }
-    // 父级 effectList 已更新，更新尾指针，指向整条链表尾。
-    returnFiber.lastEffect = completedWork.lastEffect;
-  }
-
-  // 2. 把自己连到父结点 effectList 的最后面。
-  // 所以，最后副作用链表是从底结点到顶结点的，它长这样: rootFiber -> grandGrandGrandChild -> grandGrandChild -> grandChild -> child。
-  if (flags !== NoFlags) {
-    // 如果完成工作的结点有副作用，就需要添加到 effectList 里。
-    if (returnFiber.lastEffect) {
-      // 如果父结点已经有 effectList，加到后面
-      returnFiber.lastEffect.nextEffect = completedWork;
-    } else {
-      // 如果没有，新建 effectList  
-      returnFiber.firstEffect = completedWork;
+    if (completedWork.lastEffect) {
+      if (returnFiber.lastEffect) {
+        // 如果父子都有 effectList，把 子的 effectList 连上 父的尾巴。
+        returnFiber.lastEffect.nextEffect = completedWork.firstEffect;
+      }
+      // 父级 effectList 已更新，更新尾指针，指向整条链表尾。
+      returnFiber.lastEffect = completedWork.lastEffect;
     }
-    returnFiber.lastEffect = completedWork;
+
+    // 2. 把自己连到父结点 effectList 的最后面。
+    // 所以，最后副作用链表是从底结点到顶结点的，它长这样: rootFiber -> grandGrandGrandChild -> grandGrandChild -> grandChild -> child。
+    if (completedWork.flags !== NoFlags) {
+      // 如果完成工作的结点有副作用，就需要添加到 effectList 里。
+      if (returnFiber.lastEffect) {
+        // 如果父结点已经有 effectList，加到后面
+        returnFiber.lastEffect.nextEffect = completedWork;
+      } else {
+        // 如果没有，新建 effectList  
+        returnFiber.firstEffect = completedWork;
+      }
+      returnFiber.lastEffect = completedWork;
+    }
   }
 }
 
@@ -193,4 +259,22 @@ function test() {
    */
 
   return effectList;
+}
+
+
+function JUST_TEST_GET_FLAG_NAME(flag: ReactFlags) {
+  switch (flag) {
+    case Placement: {
+      return '插入';
+    }
+    case Deletion: {
+      return '删除';
+    }
+    case Update: {
+      return '更新';
+    }
+    default: {
+      return '';
+    }
+  }
 }

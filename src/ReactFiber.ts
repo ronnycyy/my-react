@@ -52,7 +52,8 @@ export function createWorkInProgress(current: IFiber, pendingProps?: IProps): IF
     workInProgress.stateNode = current.stateNode;
     // 相互指向
     workInProgress.alternate = current;
-    current.alternate = workInProgress.alternate
+    // 神经病啊!: current.alternate = workInProgress.alternate, 应该相互指向啊!
+    current.alternate = workInProgress;
   }
   else {
     // 如果有替身 (树1 <--> 树2)

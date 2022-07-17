@@ -45,7 +45,7 @@ function childReconciler(shouldTrackSideEffects: boolean) {
    * @param newChild 新 fiber 的子虚拟DOM结点: 更新后的虚拟DOM, 单个或多个ReactElement
    */
   function reconcileChildFibers(returnFiber: IFiber, currentFirstChild: IFiber | null, newChild: IReactElement | Array<IReactElement>) {
-    if (typeof newChild === 'object') {
+    if (typeof newChild === 'object' && newChild !== null) {
       if (Array.isArray(newChild)) {
         // 多个 ReactElement
       }
@@ -67,6 +67,7 @@ function childReconciler(shouldTrackSideEffects: boolean) {
     else {
       // 纯文本 或 纯数字
     }
+    return null;
   }
   return reconcileChildFibers;
 }

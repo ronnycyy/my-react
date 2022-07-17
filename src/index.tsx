@@ -18,12 +18,18 @@ import { IReactElement } from "./models";
 //   );
 // }
 
+// const App = (
+//   <div id="title" className="title">
+//     <h1>Hello World</h1>
+//     <div>
+//       <span title="yes">Yes!</span>
+//     </div>
+//   </div>
+// )
+
 const App = (
   <div id="title" className="title">
-    <h1>Hello World</h1>
-    <div>
-      <span title="yes">Yes!</span>
-    </div>
+    hello world
   </div>
 )
 
