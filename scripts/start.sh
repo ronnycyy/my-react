@@ -1,0 +1,1 @@
+webpack serve --mode development --progress --open
