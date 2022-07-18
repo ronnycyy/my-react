@@ -4,6 +4,7 @@ import { createWorkInProgress } from "./ReactFiber";
 import { beginWork } from './ReactFiberBeginWork';
 import { completeWork } from './ReactFiberCompleteWork';
 import { Deletion, NoFlags, Placement, ReactFlags, Update } from "./ReactFiberFlags";
+import { commitPlacement } from './ReactFiberCommitWork';
 
 // 正在更新的 FiberRootNode
 let workInProgressRoot: IFiberRootNode = null;
@@ -90,32 +91,6 @@ function commitMutationEffects(root: IFiberRootNode) {
   console.log(effectList);
   // 真实DOM树 已根据 finishedWork 完成修改✅， current 指向改为 finishedWork，现在由 finishedWork 代表视图。
   root.current = finishedWork;
-}
-
-/**
- * 把 fiber 上的真实 DOM 插入到 视图
- * @param nextEffect 
- */
-function commitPlacement(nextEffect: IFiber) {
-  const stateNode = nextEffect.stateNode as HTMLElement;
-  const parentStateNode = getParentStateNode(nextEffect) as HTMLElement;
-  parentStateNode.appendChild(stateNode);
-}
-
-function getParentStateNode(fiber: IFiber) {
-  let parent = fiber.return;
-  do {
-    if (parent.tag === HostComponent) {
-      // 如果是原生，就返回它的真实DOM
-      return parent.stateNode;
-    } else if (parent.tag === HostRoot) {
-      // 必然会来到根
-      return (parent.stateNode as IFiberRootNode).containerInfo;
-    } else {
-      // 函数组件、类组件
-      parent = parent.return;
-    }
-  } while (parent);
 }
 
 

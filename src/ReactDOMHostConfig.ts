@@ -24,3 +24,7 @@ export function finalizeInitialChildren(document: HTMLElement, type: TFiberDOMTy
   // 初始化真实 dom 的属性
   setInitialProperties(document, type, props);
 }
+
+export function appendChild(parentInstance: HTMLElement, child: HTMLElement) {
+  parentInstance.appendChild(child);
+}
