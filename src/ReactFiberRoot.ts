@@ -1,4 +1,4 @@
-import { IFiberRootNode } from './models';
+import { IFiberRootNode, TContainerInfo } from './models';
 import { createHostRootFiber } from './ReactFiber';
 import { initializeUpdateQueue } from './ReactUpdateQueue';
 
@@ -14,9 +14,9 @@ import { initializeUpdateQueue } from './ReactUpdateQueue';
  * 
  * @param containerInfo 挂载React应用的DOM结点，如 div#root。
  */
-export function createFiberRoot(containerInfo: Element): IFiberRootNode {
+export function createFiberRoot(containerInfo: TContainerInfo): IFiberRootNode {
   // 创建整个React应用的根结点
-  const fiberRootNode = { containerInfo: containerInfo, current: null };
+  const fiberRootNode = { containerInfo: containerInfo, current: null, finishedWork: null };
   // 创建当前Fiber树的根结点
   const rootFiber = createHostRootFiber();
   // 相互连接

@@ -1,4 +1,4 @@
-import { IReactElement } from './models';
+import { IReactElement, TContainerInfo } from './models';
 import { createFiberRoot } from './ReactFiberRoot';
 import { updateContainer } from './ReactFiberReconciler';
 
@@ -9,11 +9,20 @@ import { updateContainer } from './ReactFiberReconciler';
  * @param container 容器，一个真实的 DOM 结点，把 element 渲染到这个结点下
  * @param callback 回调函数，渲染完成后执行
  */
-export function render(element: IReactElement, container: Element, callback?: Function) {
-  // 创建 FiberRootNode
-  // rootFiber 树诞生
-  const fiberRootNode = createFiberRoot(container);
-  // 更新根容器 (开始调和!)
-  // workInProgress 树诞生
+export function render(element: IReactElement, container: TContainerInfo, callback?: Function) {
+  // // 创建 FiberRootNode
+  // // rootFiber 树诞生
+  // const fiberRootNode = createFiberRoot(container);
+  // // 更新根容器 (开始调和!)
+  // // workInProgress 树诞生
+  // updateContainer(element, fiberRootNode);
+
+  let fiberRootNode = container._reactRootContainer;
+
+  if (!fiberRootNode) {
+    // 给一个指针给 真实DOM 容器，指向 FiberRootNode。
+    fiberRootNode = container._reactRootContainer = createFiberRoot(container);
+  }
+
   updateContainer(element, fiberRootNode);
 }

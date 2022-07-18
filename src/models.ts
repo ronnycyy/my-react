@@ -65,7 +65,9 @@ export interface IFiber {
 
 // 整个 React 应用的根结点
 export interface IFiberRootNode {
-  containerInfo: HTMLElement;   // 挂载 React 应用的真实 DOM 结点
+  containerInfo: TContainerInfo;   // 挂载 React 应用的真实 DOM 结点
   current: IFiber;  // 当前视图对应 Fiber 树的根结点
   finishedWork: IFiber;  // 更新后产生的 workInProgress 树的根结点
 }
+
+export type TContainerInfo = HTMLElement & { _reactRootContainer?: IFiberRootNode }

@@ -27,11 +27,11 @@ import { IReactElement } from "./models";
 //   </div>
 // )
 
-const App = (
-  <div id="title" className="title">
-    hello world
-  </div>
-)
+// const App = (
+//   <div id="title" className="title">
+//     title
+//   </div>
+// )
 
 /**
  * 
@@ -118,4 +118,19 @@ const App = (
  * 注意这时 props 还是空的，函数执行以后才有 children。
  * ReactDOM.render({ $$typeof: Symbol(react.element), key: null, props: {}, ref: null, type: f App() }, root);
  */
-ReactDOM.render(App as IReactElement, document.getElementById("root"));
+// ReactDOM.render(App as IReactElement, document.getElementById("root"));
+
+const root = document.getElementById('root');
+const single1 = document.getElementById('single1');
+const singleUpdate = document.getElementById('singleUpdate');
+
+single1.addEventListener('click', () => {
+  const element = <div key="title" id="title">title</div>;
+  ReactDOM.render(element as IReactElement, root);
+})
+
+singleUpdate.addEventListener('click', () => {
+  const element = <div key="title" id="title2">title2</div>;
+  ReactDOM.render(element as IReactElement, root);
+})
+
