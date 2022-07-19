@@ -121,16 +121,20 @@ import { IReactElement } from "./models";
 // ReactDOM.render(App as IReactElement, document.getElementById("root"));
 
 const root = document.getElementById('root');
-const single1 = document.getElementById('single1');
+const single = document.getElementById('single');
 const singleUpdate = document.getElementById('singleUpdate');
 
-single1.addEventListener('click', () => {
-  const element = <div key="title" id="title">title</div>;
+single.addEventListener('click', () => {
+  // 初始化
+  const element = <div key="1" id="title" title="abc">初始化结点</div>;
   ReactDOM.render(element as IReactElement, root);
 })
 
 singleUpdate.addEventListener('click', () => {
-  const element = <div key="title" id="title2">title2</div>;
+  // 更新属性
+  // key相同, type相同, 复用DOM结点
+  // 只更新属性: id,children,title
+  const element = <div key="1" id="title2">div2</div>;
   ReactDOM.render(element as IReactElement, root);
 })
 

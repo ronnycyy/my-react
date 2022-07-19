@@ -1,4 +1,4 @@
-import { IFiber, IQueue, IUpdate } from "./models";
+import { IFiber, IUpdateQueue_rootFiber, IUpdate } from "./models";
 
 /**
  * 初始化 Fiber 结点的更新队列 (环)
@@ -6,7 +6,7 @@ import { IFiber, IQueue, IUpdate } from "./models";
  */
 export function initializeUpdateQueue(fiber: IFiber) {
   // 更新队列 --> 环状链表
-  const updateQueue: IQueue = {
+  const updateQueue: IUpdateQueue_rootFiber = {
     shared: {
       pending: null
     }
@@ -31,7 +31,7 @@ export function createUpdate(): IUpdate {
  * https://processon.com/diagraming/62cedb8d7d9c0806ee2b054c
  */
 export function enqueueUpdate(fiber: IFiber, update: IUpdate) {
-  const updateQueue = fiber.updateQueue;
+  const updateQueue = fiber.updateQueue as IUpdateQueue_rootFiber;
   const pending = updateQueue.shared.pending;
 
   if (!pending) {

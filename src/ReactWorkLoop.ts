@@ -1,10 +1,9 @@
-import { HostComponent, HostRoot } from './ReactWorkTags';
 import { IFiber, IFiberRootNode } from "./models";
 import { createWorkInProgress } from "./ReactFiber";
 import { beginWork } from './ReactFiberBeginWork';
 import { completeWork } from './ReactFiberCompleteWork';
 import { Deletion, NoFlags, Placement, ReactFlags, Update } from "./ReactFiberFlags";
-import { commitPlacement } from './ReactFiberCommitWork';
+import { commitPlacement, commitWork, commitDeletion } from './ReactFiberCommitWork';
 
 // 正在更新的 FiberRootNode
 let workInProgressRoot: IFiberRootNode = null;
@@ -74,8 +73,15 @@ function commitMutationEffects(root: IFiberRootNode) {
     effectList += `${JUST_TEST_GET_FLAG_NAME(nextEffect.flags)}${nextEffect.type}->`;
     // 执行副作用
     const flags = nextEffect.flags;
+    let current = nextEffect.alternate;
     if (flags === Placement) {
       commitPlacement(nextEffect);
+    }
+    else if (flags === Update) {
+      commitWork(current, nextEffect);
+    }
+    else if (flags === Deletion) {
+      commitDeletion(nextEffect);
     }
     nextEffect = nextEffect.nextEffect;
   }

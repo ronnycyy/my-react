@@ -1,5 +1,5 @@
 import { HostRoot, HostComponent } from './ReactWorkTags';
-import { IFiber, IReactElement, TFiberDOMType } from "./models";
+import { IFiber, IPayload, IReactElement, IUpdateQueue_rootFiber, TFiberDOMType } from "./models";
 import { mountChildFibers, reconcileChildFibers } from './ReactChildFiber';
 import { shouldSetTextContent } from './ReactDOMHostConfig';
 
@@ -33,9 +33,9 @@ export function beginWork(current: IFiber, workInProgress: IFiber) {
  * @param workInProgress 新 rootFiber
  */
 function updateHostRoot(current: IFiber, workInProgress: IFiber) {
-  const updateQueue = workInProgress.updateQueue;
+  const updateQueue = workInProgress.updateQueue as IUpdateQueue_rootFiber;
   // 获取要渲染的虚拟DOM。如 App 组件对应的 ReactElement。
-  const nextChildren = updateQueue.shared.pending.payload.element;
+  const nextChildren = (updateQueue.shared.pending.payload as IPayload).element;
   // DOM DIFF
   // 对比`新虚拟DOM`和`老fiber的大儿子`, 产生 `workInProgress的大儿子` -- workInProgress.child
   reconcileChildren(current, workInProgress, nextChildren);

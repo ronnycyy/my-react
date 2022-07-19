@@ -90,6 +90,7 @@ function childReconciler(shouldTrackSideEffects: boolean) {
           // 从child的弟弟开始，往后都标记删除。
           deleteRemainingChildren(returnFiber, child.sibling);
           // 根据新属性，复用 child。
+          // 注意🔥🔥🔥 这时新老fiber的stateNode都指向老视图！后续更新就是在老视图上更新!
           const existing = useFiber(child, newChild.props);
           // 产生的是 workInProgress 的子结点，所以连上 workInProgress。
           existing.return = returnFiber;
@@ -129,7 +130,6 @@ function childReconciler(shouldTrackSideEffects: boolean) {
       // 要追踪副作用 而且 替身不存在, 说明这是一个新增的结点，需要插入 DOM。
       // 打上`插入`标记，在`提交阶段`插入新的 DOM。
       // 删除的副作用在 reconcileSingleElement 里已经标记了，所以`删`先放进的 effectList，最后执行 DOM 操作的顺序是: 先删后建。
-      // TODO: 00:53:33  单结点 diff 完成✅，进入 commit 阶段处理下🤔
       newFiber.flags = Placement;
     }
     return newFiber;

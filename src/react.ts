@@ -1,10 +1,11 @@
-import { IProps, TFiberType } from './models';
 /**
  * 手写 React
- */
+*/
 
 import { REACT_ELEMENT_TYPE } from './ReactSymbols';
 import { IReactElement } from './models';
+import { IProps, TFiberType } from './models';
+
 
 // 不要放在 props 里的属性
 const RESERVED_PROPS = {

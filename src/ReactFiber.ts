@@ -49,6 +49,7 @@ export function createWorkInProgress(current: IFiber, pendingProps?: IProps): IF
     workInProgress = createFiber(current.tag, pendingProps, current.key);
     // 把属性全部搬过来
     workInProgress.type = current.type || null;
+    // 🔥真实DOM也搬过来了! 后面更新两边都一样，都是老视图
     workInProgress.stateNode = current.stateNode;
     // 相互指向
     workInProgress.alternate = current;

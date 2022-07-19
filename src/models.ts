@@ -14,18 +14,22 @@ export interface IPayload {
   element?: IReactElement | Array<IReactElement>;  // 准备挂载的虚拟DOM。 rootFiber 的 update 对象具有，如 App 组件的 ReactElement。
 };
 
-// Fiber 上的更新队列的一个小 update 对象
+// rootFiber 更新队列的一个小 update 对象
 export interface IUpdate {
   payload: IPayload | Object;   // 更新的内容
   next: IUpdate | null;   // 指针，指向下一个 update 对象
 }
 
-//  Fiber 的更新队列，是一个单向环状链表。
-export interface IQueue {
+//  rootFiber 的更新队列，是一个单向环状链表。
+export interface IUpdateQueue_rootFiber {
   shared: {   // 共享的
     pending: IUpdate | null;   // pending 永远指向最后一个 update 对象， 因此 pending.next 指向第一个 update 对象 (环头)。
   }
 }
+
+// hostFiber 的更新队列，是一个由 多个 k,v 组成的数组, 如 [k1,v1,k2,v2,k3,v3,...]
+export type IUpdateQueue_hostFiber = string[];
+
 
 export interface IProps {
   children: IReactElement | Array<IReactElement>;
@@ -50,7 +54,7 @@ export interface IFiber {
 
   pendingProps: IProps | null;   // 新属性。更新后虚拟DOM产生的属性对象，workInProgress 结点持有。
   memoizedProps: IProps | null;  // 老属性。更新前就有，current结点持有。
-  updateQueue: IQueue;  // 更新队列。一个环，由 update 对象组成的环状链表。
+  updateQueue: IUpdateQueue_rootFiber | IUpdateQueue_hostFiber;  // 更新队列
 
   // 树结构
   return: IFiber;   // 父结点

@@ -6,6 +6,7 @@ export const NoFlags = /*                      */ 0b00000000000000000000000000; 
 export const PerformedWork = /*                */ 0b00000000000000000000000001;
 export const Placement = /*                    */ 0b00000000000000000000000010;     /**   插入DOM   */
 export const Update = /*                       */ 0b00000000000000000000000100;     /**   更新DOM   */
+export const PlacementAndUpdate = /*           */ 0b00000000000000000000000110;     /**   移动DOM   */
 export const Deletion = /*                     */ 0b00000000000000000000001000;     /**   删除DOM   */
 export const ChildDeletion = /*                */ 0b00000000000000000000010000;
 export const ContentReset = /*                 */ 0b00000000000000000000100000;
@@ -24,6 +25,7 @@ export type ReactFlags =
   | typeof PerformedWork
   | typeof Placement
   | typeof Update
+  | typeof PlacementAndUpdate
   | typeof Deletion
   | typeof ChildDeletion
   | typeof ContentReset
