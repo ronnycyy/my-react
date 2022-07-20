@@ -122,19 +122,64 @@ import { IReactElement } from "./models";
 
 const root = document.getElementById('root');
 const single = document.getElementById('single');
-const singleUpdate = document.getElementById('singleUpdate');
+const singleUpdate1 = document.getElementById('singleUpdate1');
+const singleUpdate2 = document.getElementById('singleUpdate2');
+const singleUpdate3 = document.getElementById('singleUpdate3');
+
+const single4 = document.getElementById('single4');
+const singleUpdate4 = document.getElementById('singleUpdate4');
+
 
 single.addEventListener('click', () => {
-  // 初始化
+  // 初始化单结点 diff demo
   const element = <div key="1" id="title" title="abc">初始化结点</div>;
   ReactDOM.render(element as IReactElement, root);
-})
+});
 
-singleUpdate.addEventListener('click', () => {
-  // 更新属性
-  // key相同, type相同, 复用DOM结点
-  // 只更新属性: id,children,title
+// 情况一: key相同, type相同，props不同
+// div.children="abc" -> div.children="div2"
+singleUpdate1.addEventListener('click', () => {
+  // 复用DOM结点, 只更新属性 (id,children,title)
   const element = <div key="1" id="title2">div2</div>;
   ReactDOM.render(element as IReactElement, root);
-})
+});
+
+// 情况二: key相同, type不同，props相同
+// div -> p
+singleUpdate2.addEventListener('click', () => {
+  // 删除老结点，添加新结点
+  const element = <p key="1" id="title" title="abc">初始化结点</p>;
+  ReactDOM.render(element as IReactElement, root);
+});
+
+// 情况三: key不同, type相同，props相同
+// div.key="1" -> div.key="2"
+singleUpdate3.addEventListener('click', () => {
+  // 删除老结点，添加新结点
+  const element = <div key="2" id="title" title="abc">初始化结点</div>;
+  ReactDOM.render(element as IReactElement, root);
+});
+
+
+// 情况四: 老的有多个子结点，新的只有一个子结点
+single4.addEventListener('click', () => {
+  // 初始化多个子结点 
+  const element = (
+    <ul key="ul">
+      <li key="A">a</li>
+      <li key="B" id="B">b</li>
+      <li key="C">c</li>
+    </ul>
+  )
+  ReactDOM.render(element as IReactElement, root);
+});
+
+singleUpdate4.addEventListener('click', () => {
+  const element = (
+    <ul key="ul">
+      <li key="B" id="B2">b</li>
+    </ul>
+  )
+  ReactDOM.render(element as IReactElement, root);
+});
 

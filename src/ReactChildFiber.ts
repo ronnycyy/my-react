@@ -150,6 +150,7 @@ function childReconciler(shouldTrackSideEffects: boolean) {
 
       if (Array.isArray(newChild)) {
         // 多个子 ReactElement
+        // TODO: 多结点diff  react-dom-diff4
       }
       else {
         // 单个子 ReactElement
