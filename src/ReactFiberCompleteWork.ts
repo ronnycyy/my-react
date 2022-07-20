@@ -1,7 +1,25 @@
 import { Update } from './ReactFiberFlags';
 import { HostComponent, ReactWorkTags } from './ReactWorkTags';
-import { createInstance, finalizeInitialChildren, prepareUpdate } from './ReactDOMHostConfig';
+import { appendChild, createInstance, finalizeInitialChildren, prepareUpdate } from './ReactDOMHostConfig';
 import { IFiber, IProps } from './models';
+
+
+/**
+ * 将 workInprogress fiber 的所有子结点真实DOM, 插入到 parent 上。
+ * @param parent 父DOM
+ * @param workInProgress 所有子结点
+ */
+function appendAllChildren(parent: HTMLElement, workInProgress: IFiber) {
+  let node = workInProgress.child;  // 大儿子
+  while (node) {
+    if (node.tag === HostComponent) {
+      // 所有子结点的真实DOM，都挂上去
+      appendChild(parent, node.stateNode as HTMLElement);
+    }
+    // 找弟弟
+    node = node.sibling;
+  }
+}
 
 /**
  * 创建真实 DOM 结点, 根据 workInProgress.pendingProps 赋予属性。
@@ -22,12 +40,16 @@ export function completeWork(current: IFiber, workInProgress: IFiber) {
         // 新Fiber构建完成时，收集更新并且标识 更新副作用
         updateHostComponent(current, workInProgress, workInProgress.tag, newProps);
       } else {
-        // 创建
+        // 挂载
         // 创建 workInProgress 对应的 真实 dom 结点。
         // 注意🔥: 创建不是渲染! 没有 dom 操作! 只是在内存中创建了一个 dom 对象!
         const type = workInProgress.type as keyof HTMLElementTagNameMap;   // 真实DOM元素类型，如 div, span, ...
         // 由于 React 是跨平台的，所以不能在这写 document.createElement，得编译时替换 createInstance 方法。
         const instance = createInstance(type, newProps);
+
+        // 父结点完成的时候，把自己所有子结点的真实DOM，都挂载到自己身上。
+        appendAllChildren(instance, workInProgress);
+
         // 把真实 DOM 挂载在 fiber 结点上
         workInProgress.stateNode = instance;
         // 给真实 DOM 添加属性

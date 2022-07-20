@@ -160,10 +160,12 @@ singleUpdate3.addEventListener('click', () => {
   ReactDOM.render(element as IReactElement, root);
 });
 
-
 // 情况四: 老的有多个子结点，新的只有一个子结点
 single4.addEventListener('click', () => {
   // 初始化多个子结点 
+  // ul(Placement)>li*3(None)
+  // 所有子结点的真实DOM，都挂上去
+  // li#A->li#B->li#C->插入ul#ul->null 而不是 插入li#A->插入li#B->插入li#C->插入ul#ul->null
   const element = (
     <ul key="ul">
       <li key="A">a</li>
@@ -182,4 +184,3 @@ singleUpdate4.addEventListener('click', () => {
   )
   ReactDOM.render(element as IReactElement, root);
 });
-

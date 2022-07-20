@@ -18,7 +18,7 @@ export function shouldSetTextContent(type: TFiberDOMType, props: IProps) {
 }
 
 export function createInstance(type: TFiberDOMType, props: IProps) {
-  return createElement(type)
+  return createElement(type);
 }
 
 export function finalizeInitialChildren(document: HTMLElement, type: TFiberDOMType, props: IProps) {

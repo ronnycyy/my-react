@@ -70,7 +70,7 @@ function commitMutationEffects(root: IFiberRootNode) {
   let nextEffect = finishedWork.firstEffect;
   let effectList = '';
   while (nextEffect) {
-    effectList += `${JUST_TEST_GET_FLAG_NAME(nextEffect.flags)}${nextEffect.type}->`;
+    effectList += `(${JUST_TEST_GET_FLAG_NAME(nextEffect.flags)}_${nextEffect.type}#${nextEffect.key})->`;
     // 执行副作用
     const flags = nextEffect.flags;
     let current = nextEffect.alternate;
@@ -255,7 +255,7 @@ function JUST_TEST_GET_FLAG_NAME(flag: ReactFlags) {
       return '更新';
     }
     default: {
-      return '';
+      return '无副作用';
     }
   }
 }

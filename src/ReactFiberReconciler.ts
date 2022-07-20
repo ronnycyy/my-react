@@ -1,6 +1,6 @@
 import { IFiberRootNode, IReactElement } from "./models";
 import { createUpdate, enqueueUpdate } from "./ReactUpdateQueue";
-import { scheduleUpdateOnFiber } from "./ReactWorkLoop";
+import { scheduleUpdateOnFiber } from "./ReactFiberWorkLoop";
 
 /**
  * 把 虚拟DOM 渲染到 真实DOM 容器中。

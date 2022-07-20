@@ -61,7 +61,9 @@ function childReconciler(shouldTrackSideEffects: boolean) {
 
   /**
    * 
-   * 单结点 Diff
+   * 多结点 DIFF
+   * 
+   * 🔥🔥🔥 所谓单/多结点 DIFF，指的是新结点！新结点单个就是单结点diff，新结点多个就是多结点diff!
    * 
    * 协调单个子结点 (单个子结点指的是: 新虚拟DOM是单结点，老fiber可能有多个。)
    * 
@@ -136,6 +138,62 @@ function childReconciler(shouldTrackSideEffects: boolean) {
   }
 
   /**
+   * 根据虚拟DOM创建 returnFiber 的 子fiber
+   * @param returnFiber 待创建子结点的父fiber
+   * @param newChild 子结点来源: 虚拟DOM
+   */
+  function createChild(returnFiber: IFiber, newChild: IReactElement) {
+    // ReactElement 转 Fiber
+    const created = createFiberFromElement(newChild);
+    created.return = returnFiber;
+    returnFiber.child = created;
+    return created;
+  }
+
+  /**
+   * 
+   * 多结点 DIFF
+   * 
+   * 🔥🔥🔥 所谓单/多结点 DIFF，指的是新结点！新结点单个就是单结点diff，新结点多个就是多结点diff!
+   * 
+   * @param returnFiber workInProgress，是即将新生成的这群结点的父, 如 ul。
+   * @param currentFirstChild 老 fiber 的大儿子，如 null  (本次更新: ul>null => ul>li*3)
+   * @param newChilds 多个新的结点 (ReactElement)，如 [liA,liB,liC]。
+   */
+  function reconcileChildrenArray(returnFiber: IFiber, currentFirstChild: IFiber | null, newChilds: Array<IReactElement>) {
+    // 将要返回的第一个新fiber
+    let resultingFirstChild = null;
+    // 上一个新fiber
+    let perviousNewFiber: IFiber = null;
+    // 第一个老fiber
+    let oldFiber = currentFirstChild;
+    // 新的虚拟DOM的索引
+    let newIdx = 0;
+    if (!oldFiber) {
+      // 如果没有老fiber了，循环虚拟DOM数组，为每个虚拟DOM创建一个新Fiber。
+      // 0(老) 对 多(新)
+      for (; newIdx < newChilds.length; newIdx++) {
+        const newFiber = createChild(returnFiber, newChilds[newIdx]);  // liA
+        // newFiber.flags = Placement;  [首次挂载]  源码没有在这里加标记, 而是到 ReactFiberCompleteWork.ts 里去: completeWork.appendAllChildren
+        if (!perviousNewFiber) {
+          // 如果没有上一个新fiber, 说明这一个是大儿子。
+          resultingFirstChild = newFiber;
+        } else {
+          // 上一个连上这一个，最后所有新的子结点连起来: liA->liB->liC->null
+          perviousNewFiber.sibling = newFiber;
+        }
+        // 给下一个新的子结点使用
+        perviousNewFiber = newFiber;
+      }
+      // 返回大儿子
+      return resultingFirstChild;
+    }
+    return resultingFirstChild;
+  }
+
+  /**
+   * 🔥🔥🔥 所谓单/多结点 DIFF，指的是新结点！新结点单个就是单结点diff，新结点多个就是多结点diff!
+   * 
    * 对比 current.child 和 虚拟DOM，产生 workInProgress.child。
    * 
    * @param returnFiber 新产生 fiber 的 父结点 (workInProgress)
@@ -143,14 +201,13 @@ function childReconciler(shouldTrackSideEffects: boolean) {
    * @param newChild 新 fiber 的子虚拟DOM结点: 更新后的虚拟DOM, 单个或多个ReactElement
    */
   function reconcileChildFibers(returnFiber: IFiber, currentFirstChild: IFiber | null, newChild: IReactElement | Array<IReactElement>) {
+
     if (typeof newChild === 'object' && newChild !== null) {
 
-      // 🔥🔥🔥 所谓单/多结点diff，指的是新结点！ 
-      // 新结点单个就是单结点diff，新结点多个就是多结点diff!
-
       if (Array.isArray(newChild)) {
-        // 多个子 ReactElement
-        // TODO: 多结点diff  react-dom-diff4
+        // 如果 returnFiber 是一个 ul>li*3，那么 newChild 就是一个数组 (li*3)，进到这里。
+        // 多个新的子 ReactElement
+        return reconcileChildrenArray(returnFiber, currentFirstChild, newChild);
       }
       else {
         // 单个子 ReactElement

@@ -45,7 +45,22 @@ export interface IFiber {
   type: TFiberType;  // 类型。如 'div', 'span', App函数, ...
 
   flags: ReactFlags;   // 真实DOM操作标记。协调阶段产生，提交阶段使用。
-  // 真实DOM操作单向链表 (圣诞树上的那串彩灯)
+
+  /**
+   * 真实DOM操作单向链表 (圣诞树上的那串彩灯)
+   * 
+   * Fiber 树:
+   * 
+   *     rootFiber
+   *        A
+   *    B       C
+   * D
+   * 
+   * 
+   * EffectList:
+   * rootFiber ->  D ->  B  ->  C  ->  A ->  null
+   *             三层(D)  二层(B,C)    一层(A)   (effectList，rootFiber 直接连到最低，然后从低往顶连)
+   */
   firstEffect: IFiber | null;
   nextEffect: IFiber | null;
   lastEffect: IFiber | null;
