@@ -151,8 +151,33 @@ function childReconciler(shouldTrackSideEffects: boolean) {
   }
 
   /**
+   * TODO: 多结点 DIFF  
    * 
-   * 多结点 DIFF
+   * React Dom Diff 的三个规则:
+   * 1. 只比较同级元素，不对比不同层级。
+   * 2. 不同类型对应不同元素，如 div 和 span。
+   * 3. 通过 key 来标识更新前后是同一个结点。
+   * 
+   * 时间复杂度 O(N)  同一层上的编辑距离问题？
+   * 第一轮遍历 (处理更新)
+   * 第二轮遍历 (处理新增和删除)
+   * 第三轮遍历 (处理移动)
+   * 
+   * 
+   * 
+   * 讨论情况一:  
+   * 更新前
+   * ul
+   * liA liB liC
+   * 更新后
+   * ul
+   * liA pB liC
+   * 流程 
+   * liA <-> liA  key,type 都相同  => 复用
+   * liB <-> pB   key相同,但是type不同  => 不能复用，删除老结点，插入新结点
+   * liC <-> liC  key,type 都相同  => 复用
+   * 副作用链是啥？ TODO: (00:36:30)
+   * 
    * 
    * 🔥🔥🔥 所谓单/多结点 DIFF，指的是新结点！新结点单个就是单结点diff，新结点多个就是多结点diff!
    * 

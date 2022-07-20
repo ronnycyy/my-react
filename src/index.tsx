@@ -184,3 +184,29 @@ singleUpdate4.addEventListener('click', () => {
   )
   ReactDOM.render(element as IReactElement, root);
 });
+
+// 多结点 diff 情况一: 数量、key相同，某一个type不同
+// 更新前  ul -> liA > liB > liC
+// 更新后  ul -> liA > pB  > liC
+const multiple1 = document.getElementById('multiple1');
+const multipleUpdate1 = document.getElementById('multipleUpdate1');
+multiple1.addEventListener('click', () => {
+  const element = (
+    <ul key="ul">
+      <li key="A">a</li>
+      <li key="B">b</li>
+      <li key="C">c</li>
+    </ul>
+  );
+  ReactDOM.render(element as IReactElement, root);
+});
+multipleUpdate1.addEventListener('click', () => {
+  const element = (
+    <ul key="ul">
+      <li key="A">a</li>
+      <p key="B">b</p>
+      <li key="C">c</li>
+    </ul>
+  );
+  ReactDOM.render(element as IReactElement, root);
+});
