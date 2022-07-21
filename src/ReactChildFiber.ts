@@ -231,8 +231,6 @@ function childReconciler(shouldTrackSideEffects: boolean) {
    * 第二轮遍历 (处理新增和删除)
    * 第三轮遍历 (处理移动)
    * 
-   * 
-   * 
    * 讨论情况一:  
    * 更新前
    * ul
@@ -307,7 +305,8 @@ function childReconciler(shouldTrackSideEffects: boolean) {
       return resultingFirstChild;
     }
 
-    // 第二轮循环，处理`增加`的情况
+
+    // 没有 oldFiber了，进第二轮循环，处理`增加`的情况
     if (!oldFiber) {
       // 如果没有老fiber了，循环虚拟DOM数组，为每个虚拟DOM创建一个新Fiber。
       // 0(老) 对 多(新)
@@ -331,7 +330,38 @@ function childReconciler(shouldTrackSideEffects: boolean) {
       // 返回大儿子
       return resultingFirstChild;
     }
+
+    /**
+     * 多结点DIFF 移动的情况 (精华!!) 
+     * liA,liB,liC,liD,liE,liF  => liA,liC,liE,liB,liG,liD
+     *  0   1   2   3   4   5       0   1   2   3   4   5
+     * 
+     * 0. 第一轮循环，liA => liA 复用。
+     * 1. key 不同跳出, 此时比较的是 liB => liC, newIdx为1。
+     * 2. 新的还没有遍历完，所以不会进 deleteRemainingChildren(..)。
+     * 3. 还有 oldFiber，所以，跳过第二轮循环。
+     * 4. 将剩下的 oldFibers 都放入 map 中, 得到  Map{(B,liB), (C,liC), (D,liD), (E,liE), (F,liF)} 01:17:28
+    */
+    const existingChildren = mapRemainingChildren(returnFiber, oldFiber);  // oldFiber 及其往后是剩余的老fiber
     return resultingFirstChild;
+  }
+
+  /**
+   * 把 oldRemainingChild 和  oldRemainingChild 往后的所有弟弟, 都放入 map 中。
+   * 
+   * @param returnFiber workInProgress
+   * @param oldRemainingChild 当前遍历到 current某一个 child
+   */
+  function mapRemainingChildren(returnFiber: IFiber, oldRemainingChild: IFiber) {
+    const map = new Map();
+    let existingChild = oldRemainingChild;
+    while (existingChild) {
+      // 有 key 用 key，没 key 用索引。(TODO: 建议写 JSX 要有 key, 为啥？ index 会变?)
+      const key = existingChild.key || existingChild.index;
+      map.set(key, existingChild);
+      existingChild = existingChild.sibling;
+    }
+    return map;
   }
 
   /**
