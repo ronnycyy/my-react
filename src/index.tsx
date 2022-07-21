@@ -185,17 +185,16 @@ singleUpdate4.addEventListener('click', () => {
   ReactDOM.render(element as IReactElement, root);
 });
 
+// 单点改变
 // 多结点 diff 情况一: 数量、key相同，某一个type不同
-// 更新前  ul -> liA > liB > liC
-// 更新后  ul -> liA > pB  > liC
 const multiple1 = document.getElementById('multiple1');
 const multipleUpdate1 = document.getElementById('multipleUpdate1');
 multiple1.addEventListener('click', () => {
   const element = (
     <ul key="ul">
-      <li key="A">a</li>
-      <li key="B">b</li>
-      <li key="C">c</li>
+      <li key="A">A</li>
+      <li key="B" id="B">B</li>
+      <li key="C" id="C">C</li>
     </ul>
   );
   ReactDOM.render(element as IReactElement, root);
@@ -203,9 +202,90 @@ multiple1.addEventListener('click', () => {
 multipleUpdate1.addEventListener('click', () => {
   const element = (
     <ul key="ul">
-      <li key="A">a</li>
-      <p key="B">b</p>
-      <li key="C">c</li>
+      <li key="A">A</li>
+      <p key="B" id="B">B</p>
+      <li key="C" id="C">C</li>
+    </ul>
+  );
+  ReactDOM.render(element as IReactElement, root);
+});
+
+// 新增
+// 多结点 diff 情况二: 类型和key全部相同，但是有新增元素
+const multiple2 = document.getElementById('multiple2');
+const multipleUpdate2 = document.getElementById('multipleUpdate2');
+multiple2.addEventListener('click', () => {
+  const element = (
+    <ul key="ul">
+      <li key="A">A</li>
+      <li key="B" id="B">B</li>
+      <li key="C">C</li>
+    </ul>
+  );
+  ReactDOM.render(element as IReactElement, root);
+});
+multipleUpdate2.addEventListener('click', () => {
+  const element = (
+    <ul key="ul">
+      <li key="A">A</li>
+      <li key="B" id="B2">B2</li>
+      <li key="C">C</li>
+      <li key="D">D</li>
+    </ul>
+  );
+  ReactDOM.render(element as IReactElement, root);
+});
+
+// 删除
+// 多结点 diff 情况三: 类型和key全部相同，但是减少了元素
+const multiple3 = document.getElementById('multiple3');
+const multipleUpdate3 = document.getElementById('multipleUpdate3');
+multiple3.addEventListener('click', () => {
+  const element = (
+    <ul key="ul">
+      <li key="A">A</li>
+      <li key="B" id="B">B</li>
+      <li key="C">C</li>
+    </ul>
+  );
+  ReactDOM.render(element as IReactElement, root);
+});
+multipleUpdate3.addEventListener('click', () => {
+  const element = (
+    <ul key="ul">
+      <li key="A">A</li>
+      <li key="B" id="B2">B2</li>
+    </ul>
+  );
+  ReactDOM.render(element as IReactElement, root);
+});
+
+// 移动 (DOM DIFF 精华!!!)
+// 多结点 diff 情况四: 类型和key全部相同，但是元素移动了
+const multiple4 = document.getElementById('multiple4');
+const multipleUpdate4 = document.getElementById('multipleUpdate4');
+multiple4.addEventListener('click', () => {
+  const element = (
+    <ul key="ul">
+      <li key="A">A</li>
+      <li key="B" id="b">B</li>
+      <li key="C">C</li>
+      <li key="D">D</li>
+      <li key="E">E</li>
+      <li key="F">F</li>
+    </ul>
+  );
+  ReactDOM.render(element as IReactElement, root);
+});
+multipleUpdate4.addEventListener('click', () => {
+  const element = (
+    <ul key="ul">
+      <li key="A">A</li>
+      <li key="C">C</li>
+      <li key="E">E</li>
+      <li key="B" id="b">B</li>
+      <li key="G">G</li>
+      <li key="D">D</li>
     </ul>
   );
   ReactDOM.render(element as IReactElement, root);

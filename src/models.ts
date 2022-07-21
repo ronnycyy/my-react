@@ -46,6 +46,8 @@ export interface IFiber {
 
   flags: ReactFlags;   // 真实DOM操作标记。协调阶段产生，提交阶段使用。
 
+  index: number;   // 多结点 Dom DIff 相关
+
   /**
    * 真实DOM操作单向链表 (圣诞树上的那串彩灯)
    * 

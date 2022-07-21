@@ -12,9 +12,9 @@ function childReconciler(shouldTrackSideEffects: boolean) {
   // 函数里面又声明函数，你看 React 也这么写。。
 
   /**
-   * 老的子 fiber 在新的虚拟DOM树里不存在了，标记为删除。
-   * @param returnFiber 
-   * @param childToDelete 
+   * 老fiber 的真实DOM，在新 DOM 树里不存在了，标记老fiber为删除。
+   * @param returnFiber workInProgress (新child的爹)
+   * @param childToDelete current的某个child
    */
   function deleteChild(returnFiber: IFiber, childToDelete: IFiber) {
     // 初次挂载不需要判断
@@ -56,7 +56,9 @@ function childReconciler(shouldTrackSideEffects: boolean) {
    * @param pendingProps 新属性
    */
   function useFiber(oldFiber: IFiber, pendingProps: IProps) {
-    return createWorkInProgress(oldFiber, pendingProps);
+    const clone = createWorkInProgress(oldFiber, pendingProps);
+    clone.sibling = null;
+    return clone;
   }
 
   /**
@@ -151,6 +153,72 @@ function childReconciler(shouldTrackSideEffects: boolean) {
   }
 
   /**
+   * 根据老fiber和新虚拟DOM，返回新的子fiber。
+   * @param returnFiber workInProgress  新ul
+   * @param oldFiber current.child  老liA
+   * @param newReactElement 新虚拟DOM  新liA
+   */
+  function updateElement(returnFiber: IFiber, oldFiber: IFiber, newReactElement: IReactElement) {
+    if (oldFiber) {
+      if (oldFiber.type === newReactElement.type) {
+        // key,type都一样，复用, 如  liA => liA
+        // TODO: 调试一下，复用了 stateNode?
+        const existing = useFiber(oldFiber, newReactElement.props);
+        existing.return = returnFiber;
+        return existing;   // 新liA
+      }
+    }
+    // 如果没有老fiber, 创建一个fiber结点。如 null -> pB
+    // 如果老fiber的type 和 新fiber的type 不同，如 liB -> pB, 也创建一个新fiber (pB)。
+    const created = createFiberFromElement(newReactElement);
+    created.return = returnFiber;
+    return created;
+  }
+
+  /**
+   * 1. 把新fiber放在newIdx索引的位置，为`移动`的情况作准备
+   * 2. 给新建的 fiber加 Placement 标记
+   * @param newFiber 新fiber
+   * @param newIdx 新索引
+   */
+  function placeChild(newFiber: IFiber, newIdx: number) {
+    newFiber.index = newIdx;
+    if (!shouldTrackSideEffects) {
+      // mountChildFibers
+      return;
+    }
+    const current = newFiber.alternate;
+    if (current) {
+      // update
+      // 如果有 current 说明是复用老结点的DOM，不会添加 flags。
+      // 比如 liA#1 => liA#1, key,type 都相同，进到这里，所以，仅仅是加了一个 index 而已。
+      // TODO
+    } else {
+      // mount
+      // 如 liB -> pB, pB 这个 fiber 是新建的，就在这里加了 Placement。
+      // 加标记，就在 beginWork 的 DOM DIFF 阶段💡
+      newFiber.flags = Placement;
+    }
+  }
+
+  /**
+   * 生成 workInProgress.child, 看看能不能复用 current.child。
+   * @param returnFiber workInProgress  新ul
+   * @param oldFiber current.child  老liA
+   * @param newReactElement 新虚拟DOM  新liA
+   */
+  function updateSlot(returnFiber: IFiber, oldFiber: IFiber, newReactElement: IReactElement) {
+    const key = oldFiber ? oldFiber.key : null;
+    if (newReactElement.key === key) {
+      // key 一样说明更新前后是同一个元素
+      // 可能 type 相同，也可能 type 不同，但是，总要返回一个 fiber。
+      return updateElement(returnFiber, oldFiber, newReactElement);
+    } else {
+      return null;
+    }
+  }
+
+  /**
    * TODO: 多结点 DIFF  
    * 
    * React Dom Diff 的三个规则:
@@ -176,7 +244,7 @@ function childReconciler(shouldTrackSideEffects: boolean) {
    * liA <-> liA  key,type 都相同  => 复用
    * liB <-> pB   key相同,但是type不同  => 不能复用，删除老结点，插入新结点
    * liC <-> liC  key,type 都相同  => 复用
-   * 副作用链是啥？ TODO: (00:36:30)
+   * 副作用链是啥？ 删除B,复用A,新建P,复用C
    * 
    * 
    * 🔥🔥🔥 所谓单/多结点 DIFF，指的是新结点！新结点单个就是单结点diff，新结点多个就是多结点diff!
@@ -192,13 +260,63 @@ function childReconciler(shouldTrackSideEffects: boolean) {
     let perviousNewFiber: IFiber = null;
     // 第一个老fiber
     let oldFiber = currentFirstChild;
+    // 下一个老fiber
+    let nextOldFiber = null;
     // 新的虚拟DOM的索引
     let newIdx = 0;
+
+    // 第一轮循环，处理`更新`的情况: 老fiber和新fiber都存在  liA,liB,liC => liA,pB,liC
+    // 遍历新fiber (实际上是新的ReactElement)
+    for (; oldFiber && newIdx < newChilds.length; newIdx++) {
+      // 先缓存下一个老fiber
+      nextOldFiber = oldFiber.sibling;
+      // 试图复用老fiber
+      const newFiber = updateSlot(returnFiber, oldFiber, newChilds[newIdx]);
+      if (!newFiber) {
+        // key不一样，直接跳出第一轮循环。
+        break;
+      }
+      // liB -> pB，删掉 liB
+      if (oldFiber && !newFiber.alternate) {
+        // newFiber是新建的，如上例的 pB
+        // 删掉 oldFiber (主要是删真实DOM)，如上例的 liB
+        deleteChild(returnFiber, oldFiber);
+      }
+      // key一样
+      // 核心是给 新fiber 加一个 Placement 标记。 比如 liB -> pB，pB是新建的fiber，需要加一个 Placement。
+      // 所以，liB -> pB 的例子，副作用顺序是: 删除liB, 插入pB
+      placeChild(newFiber, newIdx);
+      // 新儿子用sibling连起来
+      if (!perviousNewFiber) {
+        // 如果没有上一个新fiber, 说明这一个是大儿子。
+        resultingFirstChild = newFiber;
+      } else {
+        // 上一个连上这一个，最后所有新的子结点连起来: liA->liB->liC->null
+        perviousNewFiber.sibling = newFiber;
+      }
+      // 给下一个新的子结点使用
+      perviousNewFiber = newFiber;
+      // 继续循环，去看下一组新老fiber  liA,liB,liC => liA,pB,liC   (老走到liB, 新走到pB(newIdx++))
+      oldFiber = nextOldFiber;
+    }
+
+    // 新的已经遍历完了，剩下还有很多老的，都不会再用了，都标记为删除。
+    if (newIdx === newChilds.length) {
+      deleteRemainingChildren(returnFiber, oldFiber);
+      // 把新的大儿子返回，本情况的 DOM DIFF 结束。
+      return resultingFirstChild;
+    }
+
+    // 第二轮循环，处理`增加`的情况
     if (!oldFiber) {
       // 如果没有老fiber了，循环虚拟DOM数组，为每个虚拟DOM创建一个新Fiber。
       // 0(老) 对 多(新)
       for (; newIdx < newChilds.length; newIdx++) {
+        // 第一轮循环对于这个例子 liA,liB,liC => liA,liB,liC,liD, 有如下情况:
+        // liA 对 liA, liB 对 liB, liC 对 liC, 最后 空 对 liD, 这时候的 liD 就走到这里来了
+        // 创建一个 liD, 给 liD 加 Placement 标记
         const newFiber = createChild(returnFiber, newChilds[newIdx]);  // liA
+        placeChild(newFiber, newIdx);
         // newFiber.flags = Placement;  [首次挂载]  源码没有在这里加标记, 而是到 ReactFiberCompleteWork.ts 里去: completeWork.appendAllChildren
         if (!perviousNewFiber) {
           // 如果没有上一个新fiber, 说明这一个是大儿子。

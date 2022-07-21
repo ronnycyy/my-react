@@ -1,7 +1,8 @@
 import { IFiber, IFiberRootNode, IUpdateQueue_hostFiber } from "./models";
-import { appendChild, removeChild } from "./ReactDOMHostConfig";
+import { appendChild, insertBefore, removeChild } from "./ReactDOMHostConfig";
 import { HostComponent, HostRoot } from "./ReactWorkTags";
 import { updateProperties } from './ReactDOMComponent';
+import { Placement } from "./ReactFiberFlags";
 
 /**
  * 提交: 更新
@@ -40,7 +41,33 @@ export function commitDeletion(fiberToDealWithEffect: IFiber) {
 export function commitPlacement(fiberToDealWithEffect: IFiber) {
   const stateNode = fiberToDealWithEffect.stateNode as HTMLElement;
   const parentStateNode = getParentStateNode(fiberToDealWithEffect) as HTMLElement;
-  appendChild(parentStateNode, stateNode);
+  const before = getHostSibling(fiberToDealWithEffect) as HTMLElement;
+  if (before) {
+    // 找到第一个不用插入DOM的弟弟的真实DOM，fiber 就插入在这个弟弟前面。
+    // liA,liB,liC => liA,pB,liC  pB就要走这里，插入到liC前面
+    insertBefore(parentStateNode, stateNode, before);
+  } else {
+    // 没有可以插入的弟弟，由父亲来添加 (加在最后)
+    appendChild(parentStateNode, stateNode);
+  }
+}
+
+/**
+ * 返回 fiber 后面离它最近的真实 DOM 结点。
+ * @param fiber 结点
+ */
+function getHostSibling(fiber: IFiber) {
+  let node = fiber.sibling;
+  while (node) {
+    if ((node.flags & Placement) === 0) {
+      // 找到第一个不用插入DOM的弟弟。
+      // 需要插入的是没有DOM的，所以要找不用插入的。比如: `只有更新的` 或者 `干脆啥也没有的`。
+      // 这时候已经完成了 协调阶段，fiber的所有弟弟 都已经生成，该加标记/不该加标记的都处理完了。
+      return node.stateNode;
+    }
+    node = node.sibling;
+  }
+  return null;
 }
 
 /**

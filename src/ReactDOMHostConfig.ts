@@ -26,9 +26,13 @@ export function finalizeInitialChildren(document: HTMLElement, type: TFiberDOMTy
   setInitialProperties(document, type, props);
 }
 
-// 真实DOM操作: 增
+// 真实DOM操作: 增 (父)
 export function appendChild(parentInstance: HTMLElement, child: HTMLElement) {
   parentInstance.appendChild(child);
+}
+// 真实DOM操作: 增 (弟)
+export function insertBefore(parentInstance: HTMLElement, child: HTMLElement, sibling: HTMLElement) {
+  parentInstance.insertBefore(child, sibling);
 }
 
 // 真实DOM操作: 删
