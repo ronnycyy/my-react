@@ -8,6 +8,7 @@ export interface IReactElement {
   type: TFiberType;  // 真实DOM标签 或 代表函数组件的函数。 如 'div', function App。
   props: IProps;
   key: string;
+  index: string;  // 新结点在自己这一层的索引。 多结点 dom diff 使用，用来查找更新前对应的老结点，记录 lastPlacedIndex。
 }
 
 export interface IPayload {
