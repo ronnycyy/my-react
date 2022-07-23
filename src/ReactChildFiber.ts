@@ -153,7 +153,8 @@ function childReconciler(shouldTrackSideEffects: boolean) {
   }
 
   /**
-   * 根据老fiber和新虚拟DOM，返回新fiber。
+   * 根据老fiber和新虚拟DOM，复用/新建 fiber 返回新fiber。
+   * 
    * @param returnFiber workInProgress  新ul
    * @param oldFiber current.child  老liA
    * @param newReactElement 新虚拟DOM  新liA
@@ -181,14 +182,14 @@ function childReconciler(shouldTrackSideEffects: boolean) {
    * 3. 返回最近的`被复用的oldFiber`的索引。
    * 
    * @param newFiber 新fiber
-   * @param lastReusedOldIndex 上一个被复用的老fiber的索引
+   * @param lastPlacedIndex 上一个被复用的老fiber的索引
    * @param newIdx 新索引
    */
-  function placeChild(newFiber: IFiber, lastReusedOldIndex: number, newIdx: number) {
+  function placeChild(newFiber: IFiber, lastPlacedIndex: number, newIdx: number) {
     newFiber.index = newIdx;
     if (!shouldTrackSideEffects) {
       // mountChildFibers
-      return lastReusedOldIndex;
+      return lastPlacedIndex;
     }
     const current = newFiber.alternate;
     if (current) {
@@ -198,23 +199,25 @@ function childReconciler(shouldTrackSideEffects: boolean) {
       // 本次被复用的老fiber的索引
       const thisReuseOldIndex = current.index;
       // 多结点 DOM DIFF 精髓
-      if (thisReuseOldIndex < lastReusedOldIndex) {
-        // 结点是从左往右遍历的，index 不断变大，`本次复用的oldFiber`本应该在`上一个复用的oldFiber`右边，却发现它在`上一个复用的oldFiber`左边，说明`本次复用的oldFiber`在更新后向右移动了。
-        // TODO: 这是标记移动？
+      if (thisReuseOldIndex < lastPlacedIndex) {
+        // 移动DOM
+        // 结点是从左往右遍历的，index 不断变大，`本次复用的oldFiber`本应该在`最后一个可复用的oldFiber`右边，却发现它在`最后一个可复用的oldFiber`左边，说明`本次复用的oldFiber`在更新后向右移动了。
+        // Placement 最终调用 appendChild 或 insertBefore，在有老DOM的情况下，表现出来就是`移动`，所以这里用 Placement 没错。
         newFiber.flags |= Placement;
-        return lastReusedOldIndex;
+        return lastPlacedIndex;
       } else {
-        // `本次复用的oldFiber`就在`上一个复用的oldFiber`右边，正常，无需移动。
-        // 返回`本次复用的oldFiber`的索引，给上层函数更新 `本轮DOM DIFF的上一个复用的oldFiber`。
+        // `本次复用的oldFiber`就在`最后一个可复用的oldFiber`右边，正常，无需移动。
+        // 返回`本次复用的oldFiber`的索引，给上层函数更新 `本轮DOM DIFF的最后一个可复用的oldFiber`。
         return thisReuseOldIndex;
       }
     } else {
       // mount
+      // 插入DOM
       // 如 liB -> pB, pB 这个 fiber 是新建的，就在这里加了 Placement。
       // 加标记，就在 beginWork 的 DOM DIFF 阶段💡
       newFiber.flags = Placement;
-      // 新增的结点，没有老结点对应，维护原来的`本轮DOM DIFF的上一个复用的oldFiber`。
-      return lastReusedOldIndex;
+      // 新增的结点，没有老结点对应，维护原来的`本轮DOM DIFF的最后一个可复用的oldFiber`。
+      return lastPlacedIndex;
     }
   }
 
@@ -279,8 +282,8 @@ function childReconciler(shouldTrackSideEffects: boolean) {
     let nextOldFiber = null;
     // 新的虚拟DOM的索引
     let newIdx = 0;
-    // 多对多比较过程，老结点中，最近可复用(无需移动)的结点的索引。
-    let lastReusedOldIndex = 0;
+    // 多对多比较过程，最后一个可复用的结点在 oldFibers 中的位置索引。
+    let lastPlacedIndex = 0;
 
     // 第一轮循环，处理`更新`的情况: 老fiber和新fiber都存在  liA,liB,liC => liA,pB,liC
     // 遍历新fiber (实际上是新的ReactElement)
@@ -302,7 +305,7 @@ function childReconciler(shouldTrackSideEffects: boolean) {
       // key一样
       // 核心是给 新fiber 加一个 Placement 标记。 比如 liB -> pB，pB是新建的fiber，需要加一个 Placement。
       // 所以，liB -> pB 的例子，副作用顺序是: 删除liB, 插入pB
-      lastReusedOldIndex = placeChild(newFiber, lastReusedOldIndex, newIdx);
+      lastPlacedIndex = placeChild(newFiber, lastPlacedIndex, newIdx);
       // 新儿子用sibling连起来
       if (!perviousNewFiber) {
         // 如果没有上一个新fiber, 说明这一个是大儿子。
@@ -334,7 +337,7 @@ function childReconciler(shouldTrackSideEffects: boolean) {
         // liA 对 liA, liB 对 liB, liC 对 liC, 最后 空 对 liD, 这时候的 liD 就走到这里来了
         // 创建一个 liD, 给 liD 加 Placement 标记
         const newFiber = createChild(returnFiber, newReactElements[newIdx]);  // liA
-        lastReusedOldIndex = placeChild(newFiber, lastReusedOldIndex, newIdx);
+        lastPlacedIndex = placeChild(newFiber, lastPlacedIndex, newIdx);
         // newFiber.flags = Placement;  [首次挂载]  源码没有在这里加标记, 而是到 ReactFiberCompleteWork.ts 里去: completeWork.appendAllChildren
         if (!perviousNewFiber) {
           // 如果没有上一个新fiber, 说明这一个是大儿子。
@@ -352,24 +355,67 @@ function childReconciler(shouldTrackSideEffects: boolean) {
 
     /**
      * 多结点DIFF 移动的情况 (精华!!) 
+     * 
+     * 例子:
      * liA,liB,liC,liD,liE,liF  => liA,liC,liE,liB,liG,liD
      *  0   1   2   3   4   5       0   1   2   3   4   5
      * 
+     * 最终结果: 
+     * (删除_li#F)->(插入_li#B)->(插入_li#G)->(插入_li#D)->null
+     *               移动                       移动
+     * 特点:
+     * React 总是先删除结点, 然后按从左往右的顺序，插入结点，`插入`在老DOM存在的情况下，就是`移动`。
+     * 
+     * 步骤:
      * 0. 第一轮循环，liA => liA 复用。
      * 1. key 不同跳出, 此时比较的是 liB => liC, newIdx为1。
      * 2. 新的还没有遍历完，所以不会进 deleteRemainingChildren(..)。
      * 3. 还有 oldFiber，所以，跳过第二轮循环。
-     * 4. 将剩下的 oldFibers 都放入 oldMap 中, 得到  Map{(B,liB), (C,liC), (D,liD), (E,liE), (F,liF)}
+     * 4. 将剩下的 oldFibers 都放入 oldMap 中(<oldFiber.key || oldFiber.index, oldFiber>), 得到  Map{(B,liB), (C,liC), (D,liD), (E,liE), (F,liF)}
      * 5. 遍历新结点, 在 oldMap 中找是否有可复用的老结点, (可复用指key相同、并且type相同)。
-     *        如果有，复用老 fiber，在 map 中删掉老 fiber (已经复用过了，没有再查找的必要),
-     *    结点是从左往右遍历的，index 不断变大，`本次复用的oldFiber`本应该在`上一个复用的oldFiber`右边，却发现它在`上一个复用的oldFiber`左边，说明`本次复用的oldFiber`在更新后向右移动了。
-     *        TODO: 01:29:44
-     *        如果没有，创建新的 fiber。
+     *    5.1 如果有，复用老 fiber，在 oldMap 中删掉老 fiber (已经复用过了，没有再查找的必要)。
+     *  同时，比较 oldFiber.index 和 lastPlacedIndex (lastPlacedIndex 代表`最后一个可复用的结点在 oldFibers 中的位置索引`), 
+     * 由于结点是从左往右遍历的，在没有移动的情况下，新老 index 应该同步变大，`本次复用的oldFiber`应该在`最后一个可复用的oldFiber`右边，
+     * 也就是说 oldFiber.index 应该 >= lastPlacedIndex，但是比较结果有两种情况:
+     * 
+     *     5.1.1 oldFiber.index < lastPlacedIndex, 说明 `本次复用的oldFiber` 在`最后一个可复用的oldFiber`左边，
+     * 也就说明`本次复用的oldFiber`在更新后向右移动了，所以 newFiber 标记为`移动`, lastPlacedIndex 不变。
+     *     5.1.2 oldFiber.index >= lastPlacedIndex, 说明 `本次复用的oldFiber` 在`最后一个可复用的oldFiber`右边，
+     * 这说明 `本次复用的oldFiber` 没有移动, 本次复用的oldFiber`要作为`最后一个可复用的oldFiber`给下一轮循环的 oldFiber 作参照物，
+     * 所以更新 lastPlacedIndex 为 oldFiber.index。
+     *     
+     *    5.2 如果没有，创建新的 fiber。
+     * 
+     *                  0        1       2              3                 4             5
+     *                  A        B       C              D                 E             F   
+     *                  A        C       E              B                 G             D
+     *                 复用     复用     复用         复用(移动)            插入        复用(移动)
+     * lastPlaceIndex   0        2       4              4                 4             4
+     *                 >=       >=      >=    oldIndex < lastPlacedIndex       oldIndex < lastPlacedIndex
+     * 
+     * 现象: 
+     * React 会把 DOM结点往后移动, 不会往前移动。
+     * 
+     * 比如: 
+     * liA,liB,liC,liD,liE => liE,liA,liB,liC,liD, lastPlacedIndex 一开始就来到最大的`4`，后面都比它小，全部移动，
+     * 也就是说，实际DOM操作是: liE不动，liA,liB,liC,liD 全部向后移动。
+     * 
+     * 启发:
+     * 我们在开发过程要尽量少把结点往前移动，因为实际上 React 不会动该结点，而是把它右边的结点，全部往后移。
+     * 
+     * 6. 删除 oldMap 中剩余的结点。
     */
     // 剩下的老的放进 map
     const oldExistingChildMap = mapRemainingChildren(returnFiber, oldFiber);  // oldFiber 及其往后是剩余的老fiber
     for (; newIdx < newReactElements.length; newIdx++) {
-      // 查找有没有可复用的老结点
+      /**
+       * 查找有没有可复用的老结点:
+       *    如果没有, 新建结点，插入。
+       *    如果有，复用老结点，检查老结点是否移动。
+       * 注意: 插入和移动都是 Placement 标记，因为 appendChild 和 insertBefore 在老DOM存在的情况下，表现出来就是`移动`。
+       * 
+       
+       */
       const newFiber = updateFromMap(oldExistingChildMap, returnFiber, newIdx, newReactElements[newIdx]);
       if (newFiber) {
         if (newFiber.alternate) {
@@ -377,12 +423,35 @@ function childReconciler(shouldTrackSideEffects: boolean) {
           // 老 fiber 已经找到对应的新 fiber，没有再查找的必要了 删掉 map 里的老 fiber。
           oldExistingChildMap.delete(newFiber.key || newIdx as unknown as string);
         }
-        lastReusedOldIndex = placeChild(newFiber, lastReusedOldIndex, newIdx);
+        // 如果 oldFiber.index >= lastPlacedIndex，更新 lastPlacedIndex;
+        // 如果 oldFiber.index <  lastPlacedIndex，维持 lastPlacedIndex。(标记移动)
+        lastPlacedIndex = placeChild(newFiber, lastPlacedIndex, newIdx);
+        // 新儿子用sibling连起来
+        if (!perviousNewFiber) {
+          // 如果没有上一个新fiber, 说明这一个是大儿子。
+          resultingFirstChild = newFiber;
+        } else {
+          // 上一个连上这一个，最后所有新的子结点连起来: liA->liB->liC->null
+          perviousNewFiber.sibling = newFiber;
+        }
+        // 给下一个新的子结点使用
+        perviousNewFiber = newFiber;
       }
     }
+    // 新结点遍历完了，删除剩余的老结点
+    oldExistingChildMap.forEach(child => deleteChild(returnFiber, child));
+    // 返回大儿子
     return resultingFirstChild;
   }
 
+  /**
+   * newReactElement 查找对应的 oldFiber，复用/新建 fiber，返回。
+   * 
+   * @param oldExistingChildMap oldFiber 表
+   * @param returnFiber workInProgress
+   * @param newIdx 新 fiber 的位置索引
+   * @param newReactElement 新虚拟DOM
+   */
   function updateFromMap(oldExistingChildMap: Map<string, IFiber>, returnFiber: IFiber, newIdx: number, newReactElement: IReactElement) {
     const matchedOldFiber = oldExistingChildMap.get(newReactElement.key || newReactElement.index);
     return updateElement(returnFiber, matchedOldFiber, newReactElement);

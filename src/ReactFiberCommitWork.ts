@@ -5,7 +5,7 @@ import { updateProperties } from './ReactDOMComponent';
 import { Placement } from "./ReactFiberFlags";
 
 /**
- * 提交: 更新
+ * 提交: 更新 (更新DOM的属性)
  * @param current 老fiber
  * @param finishedWork 新fiber
  */

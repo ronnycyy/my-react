@@ -2,7 +2,7 @@ import { IFiber, IFiberRootNode } from "./models";
 import { createWorkInProgress } from "./ReactFiber";
 import { beginWork } from './ReactFiberBeginWork';
 import { completeWork } from './ReactFiberCompleteWork';
-import { Deletion, NoFlags, Placement, ReactFlags, Update } from "./ReactFiberFlags";
+import { Deletion, NoFlags, Placement, PlacementAndUpdate, ReactFlags, Update } from "./ReactFiberFlags";
 import { commitPlacement, commitWork, commitDeletion } from './ReactFiberCommitWork';
 
 // 正在更新的 FiberRootNode
@@ -75,7 +75,19 @@ function commitMutationEffects(root: IFiberRootNode) {
     const flags = nextEffect.flags;
     let current = nextEffect.alternate;
     if (flags === Placement) {
+      // 1.插入
+      // 2.移动 (多结点DOM DIFF)
       commitPlacement(nextEffect);
+    }
+    else if (flags === PlacementAndUpdate) {
+      // 移动+更新
+      // 先处理移动 
+      // appendChild, insertBefore，在老DOM已存在的情况下执行，表现出来就是移动，所以可以用 Placement 的逻辑。
+      commitPlacement(nextEffect);
+      // 处理完成，去掉`移动`标识
+      nextEffect.flags &= ~Placement;
+      // 再处理更新
+      commitWork(current, workInProgress);
     }
     else if (flags === Update) {
       commitWork(current, nextEffect);
@@ -253,6 +265,9 @@ function JUST_TEST_GET_FLAG_NAME(flag: ReactFlags) {
     }
     case Update: {
       return '更新';
+    }
+    case PlacementAndUpdate: {
+      return '插入并更新';
     }
     default: {
       return '无副作用';
